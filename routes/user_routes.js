@@ -56,7 +56,7 @@ router.get('/logout', isAuth, user.logout)
 router.get('/change_password', user.ChangingPassword) // this route is for forgot password
 router.post('/changePassword', user.changePassword) // this route is for change password
 router.get('/ConfirmChange/:userId/:token', user.confirmPasswordChange)
-router.get('/ConfirmChange1/:userId/:token', user.confirmPasswordChange1)
+router.get('/ConfirmChange1/:email', user.confirmPasswordChange1)
 router.post('/remindPassword', user.remindPassword)
 router.post('/confirmChange', [
         check('password', 'Please enter a valid password which is atleast 10 characters long') //the second key is the default message we want for all the validators check
@@ -73,6 +73,21 @@ router.post('/confirmChange', [
         })
     ],
     user.confirmChange)
+    router.post('/confirmChange1', [
+        check('password', 'Please enter a valid password which is atleast 10 characters long') //the second key is the default message we want for all the validators check
+        .isLength({ min: 10 })
+        .trim() //this is a sanitization method for password
+        ,
+        check('password')
+        .custom((value, { req }) => {
+            if (value != req.body.Confirm) {
+                throw new Error('The passwords you entered do not match');
+            } else {
+                return true;
+            }
+        })
+    ],
+    user.confirmChange1)
 router.get('/reviews', isAuth, user.reviews);
 router.get('/facReview/:facility', isAuth, user.facReview)
 module.exports = router

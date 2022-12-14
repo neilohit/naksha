@@ -17,6 +17,13 @@
             </h3>
         </div>
         <% } %>
+        <% if(message.length>0) { %>
+            <div class="alert">
+                <h3>
+                    <%= message %>
+                </h3>
+            </div>
+            <% } %>
             <div id="container">
                 <div id="wallpaper">
                     <img src="/images/wallpaper.png" alt="world" id="pic">

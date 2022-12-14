@@ -70,6 +70,6 @@ app.use((error, req, res, next) => {
 mongoose.connect(MONGO_URI, { useNewUrlParser: true, useUnifiedTopology: true })
     .then(user => {
         console.log("Connected successfully!!");
-        app.listen(4000);
+        app.listen(8080);
     })
     .catch(err => { console.log(err) })

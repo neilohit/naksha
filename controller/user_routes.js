@@ -355,7 +355,8 @@ exports.logout = (req, res, next) => {
 exports.ChangingPassword = async(req, res, next) => {
     //attaching the current user to the req
     res.render('forgot.ejs', {
-        error: ''
+        error: '',
+        message:''
     })
 
 }
@@ -369,7 +370,7 @@ exports.remindPassword = async(req, res, next) => {
                 subject: "Password Change",
                 text: "Use the link to change the password if not sent by you \n Then sorry my friend you are fucked",
                 html: `<h1>Use this link to change the password</h1>
-            <a href='http://localhost:4000/ConfirmChange1/${req.session.userId}/${req.session.token}'>Change password</a>`
+            <a href='http://localhost:4000/ConfirmChange1/${email}'>Change password</a>`
             }
             //since this sending of email might take some time therefore processing it asynchronously
         return transporter.sendMail(mailOptions)
@@ -377,23 +378,25 @@ exports.remindPassword = async(req, res, next) => {
                 console.log('mail sent successfully');
                 //render the same page with a message
                 res.render('forgot.ejs', {
-                    error: 'Check your email mail is sent!!'
+                    error:'',
+                    message: 'Check your email mail is sent!!'
                 })
             })
             .catch(err => {
                 console.log('sending mail failed');
                 console.log(err);
                 res.render('forgot.ejs', {
-                    error: 'failed to send mail try again!'
+                    error: '',
+                    message:'failed to send mail try again'
                 })
             })
     } else {
         res.render('forgot.ejs', {
-            error: 'No such email found!'
+            error: 'No such email found!',
+            message: ''
         })
     }
 }
-
 exports.changePassword = (req, res, next) => {
     crypto.randomBytes(32, (err, buffer) => {
         if (err) {
@@ -471,6 +474,7 @@ exports.changePassword = (req, res, next) => {
         .catch(err => { console.log(err) })
 }
 
+
 exports.confirmPasswordChange = (req, res, next) => {
     User.findById(req.params.userId)
         //if you want to include a time restraint you can do like this
@@ -501,30 +505,27 @@ exports.confirmPasswordChange = (req, res, next) => {
 }
 
 exports.confirmPasswordChange1 = (req, res, next) => {
-    User.findById(req.params.userId)
+    User.find({email:req.params.email})
         //if you want to include a time restraint you can do like this
         //User.find({resetToken:token,resetTokenExpiration:{$gt:Date.now()}})
         .then(user => {
-            console.log(user)
-            console.log(user.resetToken)
-
-            if (user.resetToken == req.params.token) {
-                let currDate = new Date();
-                if (user.resetTokenExpiration.getTime() <= currDate.getTime()) {
-                    res.render('forgot.ejs', {
-                        userId: user._id,
+            if (user) {
+                    res.render('passwordChange2A.ejs', {
+                        email: req.params.email,
                         error: ''
                     })
-                } else {
-                    res.render('forgot.ejs', {
-                        user: req.session.userId,
-                        error: req.flash('Timeout error')
-                    })
-                }
+                
+            }
+            else {
+                res.render('forgot.ejs', {
+                    message: '',
+                    error: req.flash('Timeout error')
+                })
             }
         })
         .catch(err => {
-            console.log(err);
+            console.log(err)
+            res.render('500.ejs');
         })
 }
 exports.confirmChange = (req, res, next) => {
@@ -583,6 +584,72 @@ exports.confirmChange = (req, res, next) => {
                 console.log(err);
                 return res.status(422).render('passwordChange2.ejs', {
                     userId: req.body.userId,
+                    error: 'Try again'
+
+                })
+            })
+    }
+}
+exports.confirmChange1 = (req, res, next) => {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+        return res.status(422).render('passwordChange2.ejs', {
+            email: req.body.email,
+            error: errors.errors[0].msg
+
+        })
+    } else {
+        User.find({email:req.body.email})
+            .then(user => {
+                user = user[0]
+                bcrypt.compare(req.body.password, user.password)
+                    .then(matched => {
+                        if (matched === true) {
+                            return res.status(422).render('passwordChange2A.ejs', {
+                                email: req.body.email,
+                                error: 'This is same as your old password'
+
+                            })
+                        } else {
+                            let userName = ""    
+                            return bcrypt.hash(req.body.password, 14)
+                            
+                            .then(password => {
+                                    User.find({email:req.body.email})
+                                        .then(user => {
+                                            user = user[0]
+                                            userName = user.user
+                                            user.password = password;
+                                            return user.save();
+                                        })
+                                        .then(result => {
+                                            console.log(result);
+                                            console.log('The password was changed successfully!!');
+                                            res.render('login.ejs', {
+                                                pageTitle: 'Login',
+                                                error1: '', //no user found
+                                                error2:'', //password error
+                                                user: userName
+
+                                            })
+
+                                        })
+                                        .catch(err => {
+                                            console.log(err);
+                                            return res.status(422).render('passwordChange2A.ejs', {
+                                                email: req.body.email,
+                                                error: 'Failed to update password'
+
+                                            })
+                                        })
+                                })
+                        }
+                    })
+            })
+            .catch(err => {
+                console.log(err);
+                return res.status(422).render('passwordChange2A.ejs', {
+                    email: req.body.email,
                     error: 'Try again'
 
                 })
